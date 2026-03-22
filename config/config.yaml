@@ -1,0 +1,24 @@
+search:
+  titles:
+    - "Senior Java Developer"
+    - "Senior Full Stack Engineer"
+    - "Backend Engineer"
+  locations:
+    - "Remote"
+    - "Europe"
+  experience_level: "senior"
+
+limits:
+  easy_apply_daily: 25
+  post_outreach_daily: 8
+  claude_calls_daily: 200
+  post_max_age_hours: 48
+  hunter_min_confidence: 70
+
+schedule:
+  jobspy_cron: "0 8 * * *"
+  easy_apply_cron: "0 9 * * *"
+  post_scraper_cron: "0 10 * * *"
+
+n8n_webhook_url: "http://localhost:5678/webhook"
+server_port: 8100

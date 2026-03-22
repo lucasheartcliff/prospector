@@ -1,0 +1,14 @@
+[Unit]
+Description=n8n Workflow Automation Watchdog
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+ExecStart=/usr/bin/n8n start
+Restart=always
+RestartSec=15
+WatchdogSec=120
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+[project]
+name = "prospector"
+version = "0.1.0"
+description = "Automated job search pipeline"
+requires-python = ">=3.11"
+dependencies = [
+    "python-jobspy>=1.1",
+    "playwright>=1.40",
+    "fastapi>=0.109",
+    "uvicorn>=0.27",
+    "anthropic>=0.18",
+    "notion-client>=2.2",
+    "httpx>=0.26",
+    "pyyaml>=6.0",
+    "pydantic>=2.5",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-playwright>=0.4",
+    "respx>=0.21",
+]
+
+[project.scripts]
+prospector-init = "scripts.init:main"
+prospector-notion-setup = "scripts.setup_notion_db:main"
+
+[tool.setuptools.packages.find]
+include = ["common*", "scrapers*", "ats*", "outreach*", "orchestration*", "scripts*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

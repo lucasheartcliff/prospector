@@ -1,0 +1,15 @@
+[Unit]
+Description=Prospector FastAPI Server
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/projects/prospector
+EnvironmentFile=/home/%i/projects/prospector/.env
+ExecStart=/home/%i/projects/prospector/.venv/bin/uvicorn orchestration.server:app --host 127.0.0.1 --port 8100
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

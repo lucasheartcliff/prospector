@@ -1,0 +1,30 @@
+# Environment
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Assets (sensitive)
+assets/resume.pdf
+assets/resume.json
+
+# Logs
+logs/*.jsonl
+logs/*.log
+
+# n8n credentials
+n8n/credentials/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

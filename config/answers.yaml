@@ -1,0 +1,27 @@
+personal:
+  full_name: "Your Name"
+  email: "you@example.com"
+  phone: "+55 11 9xxxx-xxxx"
+  linkedin_url: "https://linkedin.com/in/yourprofile"
+  github_url: "https://github.com/yourusername"
+  portfolio_url: ""
+
+work:
+  years_experience: 9
+  current_company: "Current Employer"
+  availability: "30 days"
+  salary_expectation_usd: "7000-9000/month"
+  work_authorization: "Brazilian national, open to relocation, available as PJ contractor"
+  preferred_stack:
+    - Java
+    - Spring Boot
+    - React
+    - TypeScript
+    - AWS
+
+answers:
+  willing_to_relocate: true
+  open_to_remote: true
+  requires_visa_sponsorship: false
+  cover_letter_default: |
+    I am a senior software engineer with 9 years of experience...
