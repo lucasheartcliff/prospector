@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from notion_client import AsyncClient
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_DIR / ".env")
@@ -166,11 +165,21 @@ def update_env_file(key: str, value: str):
     env_path.write_text("\n".join(lines) + "\n")
 
 
+def _extract_page_title(page: dict) -> str:
+    """Extract plain text title from a Notion page object."""
+    props = page.get("properties", {})
+    for prop in props.values():
+        if prop.get("type") == "title":
+            title_parts = prop.get("title", [])
+            return "".join(t.get("plain_text", "") for t in title_parts)
+    return "Untitled"
+
+
 # ──────────────────────────────────────────────
 # Parent page discovery
 # ──────────────────────────────────────────────
 
-async def find_or_create_parent(client: AsyncClient, parent_page_id: str | None) -> dict:
+async def find_or_create_parent(notion, parent_page_id: str | None) -> dict:
     """Resolve the parent for the database.
 
     If parent_page_id is given, validate it exists.
@@ -179,7 +188,7 @@ async def find_or_create_parent(client: AsyncClient, parent_page_id: str | None)
     # Explicit parent provided
     if parent_page_id:
         try:
-            page = await client.pages.retrieve(page_id=parent_page_id)
+            page = await notion.retrieve_page(parent_page_id)
             title = _extract_page_title(page)
             success(f"Using parent page: \"{title}\" ({parent_page_id[:8]}...)")
             return {"type": "page_id", "page_id": parent_page_id}
@@ -190,7 +199,7 @@ async def find_or_create_parent(client: AsyncClient, parent_page_id: str | None)
     # Search for existing 'Prospector' page
     info("Searching for a 'Prospector' page in your workspace...")
     try:
-        results = await client.search(
+        results = await notion.search(
             query="Prospector",
             filter={"property": "object", "value": "page"},
         )
@@ -198,8 +207,7 @@ async def find_or_create_parent(client: AsyncClient, parent_page_id: str | None)
         pages = results.get("results", [])
         prospector_pages = [
             p for p in pages
-            if "Prospector" in _extract_page_title(p).lower()
-            or "prospector" in _extract_page_title(p).lower()
+            if "prospector" in _extract_page_title(p).lower()
         ]
 
         if prospector_pages:
@@ -238,7 +246,7 @@ async def find_or_create_parent(client: AsyncClient, parent_page_id: str | None)
     # Create new page at workspace root
     info("Creating 'Prospector' page...")
     try:
-        new_page = await client.pages.create(
+        new_page = await notion.create_page(
             parent={"type": "workspace", "workspace": True},
             properties={
                 "title": [{"text": {"content": "Prospector"}}],
@@ -256,24 +264,14 @@ async def find_or_create_parent(client: AsyncClient, parent_page_id: str | None)
         sys.exit(1)
 
 
-def _extract_page_title(page: dict) -> str:
-    """Extract plain text title from a Notion page object."""
-    props = page.get("properties", {})
-    for prop in props.values():
-        if prop.get("type") == "title":
-            title_parts = prop.get("title", [])
-            return "".join(t.get("plain_text", "") for t in title_parts)
-    return "Untitled"
-
-
 # ──────────────────────────────────────────────
 # Database creation
 # ──────────────────────────────────────────────
 
-async def check_existing_database(client: AsyncClient) -> str | None:
+async def check_existing_database(notion) -> str | None:
     """Check if a 'Job Applications' database already exists."""
     try:
-        results = await client.search(
+        results = await notion.search(
             query="Job Applications",
             filter={"property": "object", "value": "database"},
         )
@@ -287,7 +285,7 @@ async def check_existing_database(client: AsyncClient) -> str | None:
     return None
 
 
-async def create_database(client: AsyncClient, parent: dict, dry_run: bool = False) -> str:
+async def create_database_record(notion, parent: dict, dry_run: bool = False) -> str:
     """Create the Job Applications database with all properties and views."""
 
     # Build the full properties dict including the title property
@@ -311,18 +309,18 @@ async def create_database(client: AsyncClient, parent: dict, dry_run: bool = Fal
         return "dry-run-id"
 
     info("Creating 'Job Applications' database...")
-    db = await client.databases.create(**payload)
+    db = await notion.create_database(**payload)
     db_id = db["id"]
     success(f"Database created: {db_id}")
 
     return db_id
 
 
-async def seed_board_view_example(client: AsyncClient, db_id: str):
+async def seed_board_view_example(notion, db_id: str):
     """Create a sample record so the database isn't empty."""
     info("Creating sample record...")
     try:
-        await client.pages.create(
+        await notion.create_page(
             parent={"database_id": db_id},
             properties={
                 "Company": {"title": [{"text": {"content": "Example Corp (delete me)"}}]},
@@ -398,14 +396,17 @@ async def run(parent_page_id: str | None = None, dry_run: bool = False, no_sampl
         info("Run 'python scripts/init.py' first, or set NOTION_TOKEN in .env")
         sys.exit(1)
 
-    client = AsyncClient(auth=token)
+    # Use the internal Notion client
+    sys.path.insert(0, str(PROJECT_DIR))
+    from common.notion_client import NotionJobsDB
+    notion = NotionJobsDB(token=token)
 
     # Check for existing database
     existing_id = os.getenv("NOTION_DATABASE_ID", "")
     if existing_id:
         info(f"NOTION_DATABASE_ID is already set: {existing_id[:8]}...")
         try:
-            db = await client.databases.retrieve(database_id=existing_id)
+            db = await notion.retrieve_database(existing_id)
             title_parts = db.get("title", [])
             title = "".join(t.get("plain_text", "") for t in title_parts)
             success(f"Database exists and is accessible: \"{title}\"")
@@ -419,7 +420,7 @@ async def run(parent_page_id: str | None = None, dry_run: bool = False, no_sampl
             warn("Existing database ID is not accessible — will create a new one")
 
     # Also check by name
-    found_id = await check_existing_database(client)
+    found_id = await check_existing_database(notion)
     if found_id and found_id != existing_id:
         info(f"Found existing 'Job Applications' database: {found_id[:8]}...")
         use_existing = input("  Use this database instead of creating a new one? [Y/n]: ").strip().lower()
@@ -430,10 +431,10 @@ async def run(parent_page_id: str | None = None, dry_run: bool = False, no_sampl
             return
 
     # Find or create parent page
-    parent = await find_or_create_parent(client, parent_page_id)
+    parent = await find_or_create_parent(notion, parent_page_id)
 
     # Create the database
-    db_id = await create_database(client, parent, dry_run=dry_run)
+    db_id = await create_database_record(notion, parent, dry_run=dry_run)
 
     if not dry_run:
         # Save database ID to .env
@@ -442,7 +443,7 @@ async def run(parent_page_id: str | None = None, dry_run: bool = False, no_sampl
 
         # Create sample record
         if not no_sample:
-            await seed_board_view_example(client, db_id)
+            await seed_board_view_example(notion, db_id)
 
         # Print view setup guide
         print_views_guide()

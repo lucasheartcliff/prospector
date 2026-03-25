@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(obsidian search:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(find /home/lucasheartcliff/projects/prospector -type f \\\\\\(-name .env* -o -name *.yml -o -name *.yaml -o -name docker-compose* -o -name *.json -o -name *.py -o -name *.sh -o -name *.toml -o -name *.conf \\\\\\))",
+      "Bash(find /home/lucasheartcliff/projects/prospector -type f \\\\\\(-name .env* -o -name *.yml -o -name *.yaml -o -name docker-compose* \\\\\\))"
     ]
   }
 }

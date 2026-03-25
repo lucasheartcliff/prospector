@@ -19,7 +19,7 @@ async def generate_summary() -> str:
 
     week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).date().isoformat()
 
-    response = await notion.client.databases.query(
+    response = await notion.query_database(
         database_id=notion.database_id,
         filter={
             "property": "Created",

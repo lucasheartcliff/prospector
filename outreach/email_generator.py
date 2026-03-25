@@ -1,10 +1,10 @@
-"""Claude-powered personalized cold email generator."""
+"""LLM-powered personalized cold email generator."""
 
 import argparse
 import json
 from pathlib import Path
 
-from common.claude_client import ClaudeClient
+from common.llm_client import LLMClient
 from common.logger import get_logger
 
 logger = get_logger("email_generator")
@@ -31,7 +31,7 @@ def generate(
     Returns dict with keys: subject, body
     """
     resume = resume_json or _load_resume()
-    client = ClaudeClient()
+    client = LLMClient()
 
     subject, body = client.generate_email(
         author_name=author_name,

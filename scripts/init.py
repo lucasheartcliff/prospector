@@ -201,52 +201,231 @@ def step_3_api_keys() -> dict:
     print()
     info("Enter your API keys below. Press Enter to keep existing values.\n")
 
-    keys = {
-        "ANTHROPIC_API_KEY": ask(
+    # --- LLM Provider Selection ---
+    print(f"""
+  {BOLD}LLM Provider{RESET} {DIM}(required){RESET}
+  {DIM}Choose the AI provider for generating cold emails, job summaries, and form answers.{RESET}
+
+    {CYAN}1{RESET} — Anthropic (Claude)
+    {CYAN}2{RESET} — OpenAI (ChatGPT)
+    {CYAN}3{RESET} — Google (Gemini)
+""")
+    _provider_map = {"1": "anthropic", "2": "openai", "3": "gemini"}
+    _existing_provider = existing.get("LLM_PROVIDER", "anthropic")
+    _default_choice = {"anthropic": "1", "openai": "2", "gemini": "3"}.get(_existing_provider, "1")
+    provider_choice = ask("Choose provider (1/2/3)", default=_default_choice)
+    llm_provider = _provider_map.get(provider_choice, "anthropic")
+    success(f"Selected provider: {llm_provider}")
+
+    # --- Provider-specific API Key ---
+    anthropic_key = existing.get("ANTHROPIC_API_KEY", "")
+    openai_key = existing.get("OPENAI_API_KEY", "")
+    gemini_key = existing.get("GEMINI_API_KEY", "")
+
+    if llm_provider == "anthropic":
+        print(f"""
+  {BOLD}Anthropic API Key{RESET} {DIM}(required){RESET}
+  {DIM}Used for Claude AI — generates cold emails, job summaries, and form answers.{RESET}
+
+  {BOLD}How to create:{RESET}
+    1. Go to {CYAN}https://console.anthropic.com/settings/keys{RESET}
+    2. Sign up or log in to your Anthropic account
+    3. Click "Create Key", give it a name (e.g. "prospector")
+    4. Copy the key (starts with {DIM}sk-ant-{RESET})
+""")
+        anthropic_key = ask(
             "Anthropic API key",
-            default=existing.get("ANTHROPIC_API_KEY", ""),
+            default=anthropic_key,
             required=True,
             secret=True,
-        ),
-        "HUNTER_API_KEY": ask(
-            "Hunter.io API key",
-            default=existing.get("HUNTER_API_KEY", ""),
-            secret=True,
-        ),
-        "NOTION_TOKEN": ask(
-            "Notion integration token",
-            default=existing.get("NOTION_TOKEN", ""),
+        )
+
+    elif llm_provider == "openai":
+        print(f"""
+  {BOLD}OpenAI API Key{RESET} {DIM}(required){RESET}
+  {DIM}Used for ChatGPT — generates cold emails, job summaries, and form answers.{RESET}
+
+  {BOLD}How to create:{RESET}
+    1. Go to {CYAN}https://platform.openai.com/api-keys{RESET}
+    2. Sign up or log in to your OpenAI account
+    3. Click "Create new secret key", give it a name (e.g. "prospector")
+    4. Copy the key (starts with {DIM}sk-{RESET})
+
+  {BOLD}Billing:{RESET}
+    {DIM}•{RESET} Requires a paid account — add credits at {CYAN}https://platform.openai.com/settings/organization/billing{RESET}
+    {DIM}•{RESET} GPT-4o is used for emails, GPT-4o-mini for summaries (cost-efficient)
+""")
+        openai_key = ask(
+            "OpenAI API key",
+            default=openai_key,
             required=True,
             secret=True,
-        ),
-        "NOTION_DATABASE_ID": ask(
-            "Notion database ID",
-            default=existing.get("NOTION_DATABASE_ID", ""),
-        ),
-        "DISCORD_WEBHOOK_URL": ask(
-            "Discord webhook URL",
-            default=existing.get("DISCORD_WEBHOOK_URL", ""),
-        ),
-        "GMAIL_FROM_ADDRESS": ask(
-            "Gmail address (for outreach)",
-            default=existing.get("GMAIL_FROM_ADDRESS", ""),
-        ),
-        "RESUME_PDF_URL": ask(
-            "Public URL for resume.pdf (e.g. Google Drive link)",
-            default=existing.get("RESUME_PDF_URL", ""),
-        ),
-        "N8N_WEBHOOK_URL": ask(
-            "n8n webhook base URL",
-            default=existing.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook"),
-        ),
-        "SERVER_PORT": ask(
-            "FastAPI server port",
-            default=existing.get("SERVER_PORT", "8100"),
-        ),
-        "DEBUG": ask(
-            "Debug mode (true/false)",
-            default=existing.get("DEBUG", "false"),
-        ),
+        )
+
+    elif llm_provider == "gemini":
+        print(f"""
+  {BOLD}Google Gemini API Key{RESET} {DIM}(required){RESET}
+  {DIM}Used for Gemini — generates cold emails, job summaries, and form answers.{RESET}
+
+  {BOLD}How to create:{RESET}
+    1. Go to {CYAN}https://aistudio.google.com/apikey{RESET}
+    2. Sign in with your Google account
+    3. Click "Create API key" and select a Google Cloud project
+       (one will be created for you if you don't have any)
+    4. Copy the generated API key
+
+  {BOLD}Billing:{RESET}
+    {DIM}•{RESET} Free tier available with rate limits
+    {DIM}•{RESET} For higher limits, enable billing on your Google Cloud project
+""")
+        gemini_key = ask(
+            "Gemini API key",
+            default=gemini_key,
+            required=True,
+            secret=True,
+        )
+
+    # --- Hunter.io API Key ---
+    print(f"""
+  {BOLD}Hunter.io API Key{RESET} {DIM}(optional — needed for email outreach){RESET}
+  {DIM}Finds email addresses for hiring managers and recruiters.{RESET}
+
+  {BOLD}How to create:{RESET}
+    1. Go to {CYAN}https://hunter.io/users/sign_up{RESET}
+    2. Create a free account (25 searches/month on free tier)
+    3. Go to {CYAN}https://hunter.io/api-keys{RESET}
+    4. Copy your API key
+""")
+    hunter_key = ask(
+        "Hunter.io API key",
+        default=existing.get("HUNTER_API_KEY", ""),
+        secret=True,
+    )
+
+    # --- Notion Integration Token ---
+    print(f"""
+  {BOLD}Notion Integration Token{RESET} {DIM}(required){RESET}
+  {DIM}Connects to your Notion workspace to track job applications.{RESET}
+
+  {BOLD}How to create:{RESET}
+    1. Go to {CYAN}https://www.notion.so/profile/integrations{RESET}
+    2. Click "+ New integration"
+    3. Name it (e.g. "Prospector"), select your workspace
+    4. Under "Capabilities", enable: Read content, Update content, Insert content
+    5. Click "Save" and copy the Internal Integration Secret (starts with {DIM}secret_{RESET})
+    6. {YELLOW}Important:{RESET} You must also share the target Notion page with your integration:
+       Open the page → "..." menu → "Connections" → Add your integration
+""")
+    notion_token = ask(
+        "Notion integration token",
+        default=existing.get("NOTION_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+
+    # --- Notion Database ID ---
+    print(f"""
+  {BOLD}Notion Database ID{RESET} {DIM}(optional — can be auto-created in Step 8){RESET}
+  {DIM}The ID of the Notion database where job applications are tracked.{RESET}
+
+  {BOLD}How to find it:{RESET}
+    1. Open the database page in Notion
+    2. The URL looks like: notion.so/<workspace>/{CYAN}<database-id>{RESET}?v=...
+    3. Copy the 32-character ID (with or without dashes)
+    {DIM}Or leave blank and we'll create it automatically in Step 8.{RESET}
+""")
+    notion_db_id = ask(
+        "Notion database ID",
+        default=existing.get("NOTION_DATABASE_ID", ""),
+    )
+
+    # --- Discord Webhook URL ---
+    print(f"""
+  {BOLD}Discord Webhook URL{RESET} {DIM}(optional — for notifications){RESET}
+  {DIM}Sends alerts when new jobs are found, applications are submitted, or errors occur.{RESET}
+
+  {BOLD}How to create:{RESET}
+    1. Open Discord and go to your server
+    2. Server Settings → Integrations → Webhooks
+    3. Click "New Webhook"
+    4. Choose a channel (e.g. #job-search), name it "Prospector"
+    5. Click "Copy Webhook URL"
+""")
+    discord_webhook = ask(
+        "Discord webhook URL",
+        default=existing.get("DISCORD_WEBHOOK_URL", ""),
+    )
+
+    # --- Gmail Address ---
+    print(f"""
+  {BOLD}Gmail Address{RESET} {DIM}(optional — for cold email outreach){RESET}
+  {DIM}The Gmail address used as the sender for outreach emails via n8n.{RESET}
+
+  {BOLD}Setup notes:{RESET}
+    {DIM}•{RESET} Use a regular Gmail address (the n8n Gmail node handles OAuth)
+    {DIM}•{RESET} You'll connect Gmail in n8n later (see docs/getting_started.md, Step 9)
+    {DIM}•{RESET} Consider using a dedicated address to keep job outreach separate
+""")
+    gmail_address = ask(
+        "Gmail address (for outreach)",
+        default=existing.get("GMAIL_FROM_ADDRESS", ""),
+    )
+
+    # --- Resume PDF URL ---
+    print(f"""
+  {BOLD}Resume PDF URL{RESET} {DIM}(optional){RESET}
+  {DIM}A publicly accessible link to your resume, included in outreach emails.{RESET}
+
+  {BOLD}How to create (Google Drive):{RESET}
+    1. Upload your resume.pdf to Google Drive
+    2. Right-click → Share → "Anyone with the link"
+    3. Copy the share link
+""")
+    resume_url = ask(
+        "Public URL for resume.pdf (e.g. Google Drive link)",
+        default=existing.get("RESUME_PDF_URL", ""),
+    )
+
+    # --- n8n Webhook URL ---
+    print(f"""
+  {BOLD}n8n Webhook Base URL{RESET} {DIM}(default: http://localhost:5678/webhook){RESET}
+  {DIM}Base URL for n8n webhook triggers that orchestrate the pipeline.{RESET}
+
+  {BOLD}Setup:{RESET}
+    {DIM}•{RESET} If running n8n locally: use the default {CYAN}http://localhost:5678/webhook{RESET}
+    {DIM}•{RESET} If using n8n Cloud: go to {CYAN}https://app.n8n.cloud{RESET}, sign up,
+      and use your instance URL (e.g. https://your-name.app.n8n.cloud/webhook)
+    {DIM}•{RESET} If self-hosting: use your server's URL + /webhook
+""")
+    n8n_url = ask(
+        "n8n webhook base URL",
+        default=existing.get("N8N_WEBHOOK_URL", "http://localhost:5678/webhook"),
+    )
+
+    # --- Server Port & Debug ---
+    server_port = ask(
+        "FastAPI server port",
+        default=existing.get("SERVER_PORT", "8100"),
+    )
+    debug_mode = ask(
+        "Debug mode (true/false)",
+        default=existing.get("DEBUG", "false"),
+    )
+
+    keys = {
+        "LLM_PROVIDER": llm_provider,
+        "ANTHROPIC_API_KEY": anthropic_key,
+        "OPENAI_API_KEY": openai_key,
+        "GEMINI_API_KEY": gemini_key,
+        "HUNTER_API_KEY": hunter_key,
+        "NOTION_TOKEN": notion_token,
+        "NOTION_DATABASE_ID": notion_db_id,
+        "DISCORD_WEBHOOK_URL": discord_webhook,
+        "GMAIL_FROM_ADDRESS": gmail_address,
+        "RESUME_PDF_URL": resume_url,
+        "N8N_WEBHOOK_URL": n8n_url,
+        "SERVER_PORT": server_port,
+        "DEBUG": debug_mode,
     }
 
     # Write .env
@@ -374,7 +553,7 @@ def step_5_search_config():
     info("Rate limits:")
     easy_apply = ask("Max Easy Apply per day", default="25")
     outreach = ask("Max outreach emails per day", default="8")
-    claude_calls = ask("Max Claude API calls per day", default="200")
+    llm_calls = ask("Max LLM API calls per day", default="200")
 
     print()
     info("Schedule (cron format):")
@@ -399,7 +578,7 @@ def step_5_search_config():
 limits:
   easy_apply_daily: {easy_apply}
   post_outreach_daily: {outreach}
-  claude_calls_daily: {claude_calls}
+  llm_calls_daily: {llm_calls}
   post_max_age_hours: 48
   hunter_min_confidence: 70
 
@@ -732,14 +911,21 @@ def step_10_validate():
     else:
         warn("Discord webhook not configured — skipping test")
 
-    # Test Anthropic API key
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if anthropic_key and anthropic_key.startswith("sk-ant-"):
-        success("Anthropic API key format looks valid")
-    elif anthropic_key:
-        warn("Anthropic API key set but format looks unusual")
+    # Test LLM API key for the selected provider
+    llm_provider = os.getenv("LLM_PROVIDER", "anthropic").lower()
+    _provider_key_map = {
+        "anthropic": ("ANTHROPIC_API_KEY", "sk-ant-", "Anthropic"),
+        "openai": ("OPENAI_API_KEY", "sk-", "OpenAI"),
+        "gemini": ("GEMINI_API_KEY", "", "Gemini"),
+    }
+    key_env, prefix, label = _provider_key_map.get(llm_provider, _provider_key_map["anthropic"])
+    llm_key = os.getenv(key_env, "")
+    if llm_key and (not prefix or llm_key.startswith(prefix)):
+        success(f"{label} API key format looks valid (provider: {llm_provider})")
+    elif llm_key:
+        warn(f"{label} API key set but format looks unusual")
     else:
-        warn("Anthropic API key not set — Claude features will not work")
+        warn(f"{label} API key not set — LLM features will not work")
 
     return not errors_found
 

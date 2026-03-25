@@ -14,9 +14,14 @@ class SearchConfig(BaseModel):
 class LimitsConfig(BaseModel):
     easy_apply_daily: int = 25
     post_outreach_daily: int = 8
-    claude_calls_daily: int = 200
+    llm_calls_daily: int = 200
     post_max_age_hours: int = 48
     hunter_min_confidence: int = 70
+
+    @property
+    def claude_calls_daily(self) -> int:
+        """Backward-compatible alias."""
+        return self.llm_calls_daily
 
 
 class ScheduleConfig(BaseModel):

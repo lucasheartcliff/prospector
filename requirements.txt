@@ -3,7 +3,6 @@ playwright>=1.40
 fastapi>=0.109
 uvicorn>=0.27
 anthropic>=0.18
-notion-client>=2.2
 httpx>=0.26
 pyyaml>=6.0
 pydantic>=2.5
